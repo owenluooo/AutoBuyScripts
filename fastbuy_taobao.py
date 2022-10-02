@@ -1,3 +1,7 @@
+# 出处：https://github.com/veezean/AutoBuyScripts
+# 更新以兼容最新版本Selenium
+# 需要自行下载chromedriver
+
 ##################################################################################################################
 # 淘宝抢购脚本                                                                                                   #
 # 使用方法：                                                                                                     #
@@ -11,14 +15,15 @@
 import os
 from selenium import webdriver
 from selenium.webdriver.common.action_chains import ActionChains
+from selenium.webdriver.common.by import By
 import datetime
 import time
 import random
 
 
 # ==== 设定抢购时间 （修改此处，指定抢购时间点）====
-BUY_TIME = "2018-10-14 19:31:30"
-
+BUY_TIME = "2022-10-02 10:00:00"
+# BUY_TIME = input("输入时间（格式:YYYY-MM-DD HH:MM:SS）：")
 
 
 # ====  标识登录状态、重试次数 ====
@@ -34,10 +39,11 @@ if now_time > buy_time_object:
     exit(0)
 
 print("正在打开chrome浏览器...")
-#让浏览器不要显示当前受自动化测试工具控制的提醒
+# 让浏览器不要显示当前受自动化测试工具控制的提醒
 option = webdriver.ChromeOptions()
 option.add_argument('disable-infobars')
-driver = webdriver.Chrome(chrome_options=option)
+chromedriver_path = "C:\Program Files\Google\Chrome\chromedriver_win32\chromedriver.exe"
+driver = webdriver.Chrome(chrome_options=option, executable_path=chromedriver_path)
 driver.maximize_window()
 print("chrome浏览器已经打开...")
 
@@ -45,11 +51,11 @@ print("chrome浏览器已经打开...")
 def __login_operates():
     driver.get("https://www.taobao.com")
     try:
-        if driver.find_element_by_link_text("亲，请登录"):
+        if driver.find_element(By.LINK_TEXT, "亲，请登录"):
             print("没登录，开始点击登录按钮...")
-            driver.find_element_by_link_text("亲，请登录").click()
+            driver.find_element(By.LINK_TEXT, "亲，请登录").click()
             print("请使用手机淘宝扫描屏幕上的二维码进行登录...")
-            time.sleep(10)
+            time.sleep(20)
     except:
         print("已登录，开始执行跳转...")
         global login_success
@@ -67,13 +73,13 @@ def login():
         __login_operates()
         if login_success:
             print("登录成功")
-            break;
+            break
         else:
             print("等待登录中...")
 
     if not login_success:
         print("规定时间内没有扫码登录淘宝成功，执行失败，退出脚本!!!")
-        exit(0);
+        exit(0)
     
 
 
@@ -102,13 +108,13 @@ def keep_login_and_wait():
 
 
 def buy():
-    #打开购物车
+    # 打开购物车
     driver.get("https://cart.taobao.com/cart.htm")
     time.sleep(1)
  
-    #点击购物车里全选按钮
-    if driver.find_element_by_id("J_SelectAll1"):
-        driver.find_element_by_id("J_SelectAll1").click()
+    # 点击购物车里全选按钮
+    if driver.find_element(By.ID, "J_SelectAll1"):
+        driver.find_element(By.ID, "J_SelectAll1").click()
         print("已经选中购物车中全部商品 ...")
 
     submit_succ = False
@@ -127,24 +133,30 @@ def buy():
             retry_submit_times = retry_submit_times + 1
 
             try:
-                #点击结算按钮
-                if driver.find_element_by_id("J_Go"):
-                    driver.find_element_by_id("J_Go").click()
+                # 点击结算按钮
+                if driver.find_element(By.ID, "J_Go"):
+                    driver.find_element(By.ID, "J_Go").click()
                     print("已经点击结算按钮...")
                     click_submit_times = 0
+                    fail_times = 0
                     while True:
                         try:
-                            if click_submit_times < 10:
-                                driver.find_element_by_link_text('提交订单').click()
+                            if click_submit_times < 40:
+                                driver.find_element(By.LINK_TEXT, '提交订单').click()
                                 print("已经点击提交订单按钮")
                                 submit_succ = True
                                 break
                             else:
-                                print("提交订单失败...")
+                                if fail_times >= 50:
+                                    break
+                                else:
+                                    print("提交订单失败...")
+                                    fail_times += 1
+
                         except Exception as ee:
                             #print(ee)
                             print("没发现提交订单按钮，可能页面还没加载出来，重试...")
-                            click_submit_times = click_submit_times + 1
+                            click_submit_times += 1
                             time.sleep(0.1)
             except Exception as e:
                 print(e)
@@ -156,4 +168,3 @@ def buy():
 login()
 keep_login_and_wait()
 buy()
- 
